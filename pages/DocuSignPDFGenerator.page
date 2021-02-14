@@ -1,0 +1,528 @@
+<apex:page controller="DocuSignPDFGeneratorController"
+           action="{!Execute}"
+           renderAs="{!IF(RenderAsPdf, 'pdf', 'html')}"
+           docType="html-5.0"
+           applyHtmlTag="{!HasErrors}"
+           applyBodyTag="{!HasErrors}"
+           showHeader="{!HasErrors}"
+           standardStylesheets="{!HasErrors}"
+           cache="false">
+
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DocuSign PDF Generator for {!Opp.Id}</title>
+
+  <style>
+    @page
+    {
+      margin: 76px -10px 0;
+
+      @top-center
+      {
+        content: element(header);
+      }
+      @bottom-left
+      {
+        content: element(footer);
+      }
+    }
+
+    .clear-fix:after
+    {
+      content: ".";
+      clear: both;
+      display: block;
+      height: 0;
+      visibility: hidden;
+    }
+
+    .noWrap
+    {
+       white-space: nowrap;
+    }
+
+    body
+    {
+      margin: 0;
+      font-family: Arial, "Segoe UI", Verdana, Helvetica, Sans-Serif;
+      font-size: 12px;
+    }
+
+    div.header
+    {
+      margin-top: 30px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 5px solid #4b4e52;
+      position: running(header);
+    }
+
+    address
+    {
+      display: block;
+      text-align: center;
+      font-size: 10px;
+      font-style: normal;
+      color: #999;
+    }
+
+    div.container
+    {
+      margin: 0 auto;
+      width: 750px;
+    }
+
+    div.container > div
+    {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 5px double #4b4e52;
+    }
+
+    table > tbody > tr + tr > td
+    {
+      padding-top: 5px;
+    }
+
+    table > tbody > tr > td
+    {
+      vertical-align: top;
+    }
+
+    table.contact,
+    div.products > table,
+    table.fields
+    {
+      border-collapse: collapse;
+    }
+
+    table.contact > tbody > tr > td:first-child,
+    table.contact > tbody > tr > td.label
+    {
+      font-weight: bold;
+      text-align: right;
+      padding-right: 5px;
+    }
+
+    div.products > table
+    {
+      width: 100%;
+    }
+
+    div.products > table > thead > tr > th,
+    div.products > table > tbody > tr > td,
+    div.products > table > tfoot > tr > td
+    {
+      padding: 5px;
+    }
+
+    div.products > table > thead > tr > th + th,
+    div.products > table > tbody > tr > td + td,
+    div.products > table > tfoot > tr > td + td
+    {
+      text-align: center;
+    }
+
+    div.products > table > thead > tr > th:first-child
+    {
+      text-align: left;
+    }
+
+    div.products > table > thead > tr > th
+    {
+      font-weight: bold;
+      font-size: 14px;
+      background-color: #4b4e52;
+      color: #FFF;
+    }
+
+    div.products > table > tbody > tr.odd > td
+    {
+      background-color: #CCC;
+    }
+
+    div.products > table > tfoot > tr > td
+    {
+      font-weight: bold;
+    }
+
+    div.products > table > tfoot > tr > td:first-child
+    {
+      text-align: right;
+    }
+
+    div.products table,
+    div.products th,
+    div.products td
+    {
+      border: 1px solid black;
+    }
+
+    div.products div.details
+    {
+      margin-left: 15px;
+    }
+
+    div.products div.details > span
+    {
+      display: block;
+    }
+
+    div.order-options > table
+    {
+      width: 100%;
+    }
+
+    div.order-options > table > tbody > tr + tr > td
+    {
+      padding-top: 5px;
+    }
+
+    div.order-options > table.order-options-table > tbody > tr + tr > td
+    {
+      padding-top: 10px;
+    }
+
+    td.tabUnderline:first-child
+    {
+      padding-right: 5px;
+    }
+
+    td.tabUnderline + td.tabUnderline
+    {
+      padding-left: 5px;
+    }
+
+    td.tabUnderline > div
+    {
+      border-bottom: 1px solid #000;
+    }
+
+    td.address
+    {
+      border: 1px solid #000;
+    }
+
+    pre.tabAnchor
+    {
+      display: inline-block;
+      color: #FFF;
+      margin: 0;
+    }
+
+    ul.errors
+    {
+      font-size: 14px;
+      font-weight: bold;
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    ul.errors:before
+    {
+      content: "DocuSign could not be processed due to the following issues:";
+      margin-left: -20px;
+    }
+
+    dl
+    {
+      margin: 0;
+    }
+
+    dl > dt
+    {
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    dl > dd
+    {
+      margin-left: 0;
+      padding-left: 20px;
+    }
+
+    dl > dd + dt
+    {
+      margin-top: 20px;
+    }
+  </style>
+
+</head>
+
+<body>
+  <apex:outputPanel layout="none" rendered="{!HasErrors}">
+    <p><a href="/{!OppId}">Return to Opportunity</a></p>
+    <apex:messages styleClass="errors" />
+  </apex:outputPanel>
+  <apex:outputPanel layout="none" rendered="{!NOT(HasErrors)}">
+    <div class="header">
+      <address>123 Company Street | Boston, Massachusetts | 02101 United States | <a href="#" target="_blank">www.yourcompany.com</a></address>
+    </div>
+
+    <div class="container" style="page-break-after:always;">
+
+      <div class="clear-fix">
+        <div style="float: left;">
+          <apex:image url="{!URLFOR($Resource.Your_Static_Resource_ZIP_File,'Images/YourCompanyLogo.png')}" width="300px" />
+        </div>
+        <div style="float: right;">
+          <table class="contact">
+            <colgroup>
+              <col width="200" />
+              <col width="*" />
+            </colgroup>
+            <tbody>
+              <tr>
+                <td>Sales Representative:</td>
+                <td>{!Opp.Owner.Name}</td>
+              </tr>
+              <tr>
+                <td>Phone:</td>
+                <td>{!Opp.Owner.Phone}</td>
+              </tr>
+              <tr>
+                <td>Email:</td>
+                <td><a href="mailto:{!Opp.Owner.Email}">{!Opp.Owner.Email}</a></td>
+              </tr>
+              <tr>
+                <td>Document Number:</td>
+                <td>{!Opp.Id}</td>
+              </tr>
+              <tr>
+                <td>Created Date:</td>
+                <td>
+                  <apex:outputText value="{0, date, yyyy/MM/dd}">
+                    <apex:param value="{!TODAY()}" />
+                  </apex:outputText></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="clear-fix">
+        <table class="contact">
+          <colgroup>
+            <col width="72" />
+            <col width="178" />
+            <col width="72" />
+            <col width="178" />
+            <col width="72" />
+            <col width="178" />
+          </colgroup>
+          <tbody>
+            <tr>
+              <td class="label">Company:</td>
+              <td>{!Opp.Account.Name}</td>
+              <td class="label">Ship to:</td>
+              <td>{!Opp.Shipping_Contact__r.Account.Name}</td>
+              <td class="label">Bill to:</td>
+              <td>{!Opp.Billing_Contact__r.Account.Name}</td>
+            </tr>
+            <tr>
+              <td class="label">Contact:</td>
+              <td>{!Opp.Contact.Name}</td>
+              <td class="label">Contact:</td>
+              <td>{!Opp.Shipping_Contact__r.Name}</td>
+              <td class="label">Contact:</td>
+              <td>{!Opp.Billing_Contact__r.Name}</td>
+            </tr>
+            <tr>
+              <td class="label">Address:</td>
+              <td>{!Opp.Account.BillingStreet}
+                <br/>{!Opp.Account.BillingCity}<apex:outputText rendered="{!NOT(ISNULL(Opp.Account.BillingStateCode))}" value=", {!Opp.Account.BillingStateCode}" />
+                <br/>{!Opp.Account.BillingCountry}
+                <br/>{!Opp.Account.BillingPostalCode}
+              </td>
+              <td class="label">Address:</td>
+              <td>{!Opp.Shipping_Contact__r.Account.ShippingStreet}
+                <br/>{!Opp.Shipping_Contact__r.Account.ShippingCity}<apex:outputText rendered="{!NOT(ISNULL(Opp.Shipping_Contact__r.Account.ShippingStateCode))}" value=", {!Opp.Shipping_Contact__r.Account.ShippingStateCode}" />
+                <br/>{!Opp.Shipping_Contact__r.Account.ShippingCountry}
+                <br/>{!Opp.Shipping_Contact__r.Account.ShippingPostalCode}
+              </td>
+              <td class="label">Address:</td>
+              <td>{!Opp.Billing_Contact__r.Account.BillingStreet}
+                <br/>{!Opp.Billing_Contact__r.Account.BillingCity}<apex:outputText rendered="{!NOT(ISNULL(Opp.Billing_Contact__r.Account.BillingStateCode))}" value=", {!Opp.Billing_Contact__r.Account.BillingStateCode}" />
+                <br/>{!Opp.Billing_Contact__r.Account.BillingCountry}
+                <br/>{!Opp.Billing_Contact__r.Account.BillingPostalCode}
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Email:</td>
+              <td><a href="mailto:{!Opp.Contact.Email}">{!Opp.Contact.Email}</a></td>
+              <td class="label">Email:</td>
+              <td><a href="mailto:{!Opp.Shipping_Contact__r.Email}">{!Opp.Shipping_Contact__r.Email}</a></td>
+              <td class="label">Email:</td>
+              <td><a href="mailto:{!Opp.Billing_Contact__r.Email}">{!Opp.Billing_Contact__r.Email}</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="products">
+        <table cellspacing="1">
+          <thead>
+            <tr>
+              <th>Product Description</th>
+              <th class="noWrap">Unit Price</th>
+              <th>Qty</th>
+              <th>Price</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <apex:variable value="{!1}" var="liIndex"/>
+            <apex:repeat var="li" value="{!Opp.OpportunityLineItems}">
+              <tr class="{!IF(mod(liIndex,2) == 0, 'even', 'odd')}" style="page-break-inside:avoid;">
+                <td>{!li.Product2.ProductCode}
+                  <br/>{!li.Product2.Name}
+                  <div class="details">
+                    <apex:outputText escape="false" rendered="{!NOT(ISNULL(li.Service_Start_Date__c)) && li.Start_Date__c > DATE(1900, 1, 1)}" value="<span>Start date: {0, date, yyyy/MM/dd}</span>">
+                      <apex:param value="{!li.Start_Date__c}" />
+                    </apex:outputText>
+                    <apex:outputText escape="false" rendered="{!NOT(ISNULL(li.Service_End_Date__c)) && li.Service_End_Date__c > DATE(1900, 1, 1)}" value="<span>End date: {0, date, yyyy/MM/dd}</span>">
+                      <apex:param value="{!li.Service_End_Date__c}" />
+                    </apex:outputText>
+                  </div>
+                </td>
+                <td class="noWrap"><apex:outputText value="{0}{1, number, {!CurrencyFormat}}">
+                    <apex:param value="{!CurrencySymbol}" />
+                    <apex:param value="{!li.UnitPrice}" />
+                  </apex:outputText>
+                </td>
+                <td>
+                  <apex:outputText value="{0, number, integer}">
+                    <apex:param value="{!li.Quantity}" />
+                  </apex:outputText>
+                </td>
+                <td class="noWrap"><apex:outputText value="{0}{1, number, {!CurrencyFormat}}">
+                    <apex:param value="{!CurrencySymbol}" />
+                    <apex:param value="{!li.TotalPrice}" />
+                  </apex:outputText>
+                </td>
+              </tr>
+              <apex:variable value="{!liIndex+1}" var="liIndex"/>
+            </apex:repeat>
+          </tbody>
+
+          <tfoot>
+            <tr>
+              <td colspan="3">Total Price</td>
+              <td style="white-space: nowrap;"><apex:outputText value="{0}{1, number, {!CurrencyFormat}}">
+                    <apex:param value="{!CurrencySymbol}" />
+                  <apex:param value="{!Opp.Amount}" />
+                </apex:outputText>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <p><i>Your company's quotes disclaimer.</i></p>
+    </div>
+
+    <div class="container">
+      <p style="float:right;">Document Number: {!Opp.Id}</p>
+
+      <div class="order-options" style="clear:both;">
+        <h2>Order Options:</h2>
+        <table cellspacing="0" cellpadding="0" class="order-options-table">
+          <colgroup>
+            <col width="33" />
+            <col width="100" />
+            <col width="200" />
+            <col width="*" />
+          </colgroup>
+          <tr>
+            <td><pre class="tabAnchor">{yPO}</pre></td>
+            <td>Purchase Order # </td>
+            <td class="tabUnderline"><div><pre class="tabAnchor">{po#}</pre></div></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td style="padding-top:10px;"><pre class="tabAnchor">{nPO}</pre></td>
+            <td style="padding-top:10px;" colspan="3">Purchase order not needed. Issue payment from invoice.</td>
+          </tr>
+        </table>
+
+        <br/>
+
+        <table cellspacing="0" cellpadding="0" class="fields">
+          <colgroup>
+            <col width="370" />
+            <col width="10" />
+            <col width="370" />
+          </colgroup>
+          <tr>
+            <td>Authorized Signature:</td>
+            <td></td>
+            <td><pre class="tabAnchor">{BV}</pre>I confirm that the billing information provided is accurate.</td>
+          </tr>
+          <tr>
+            <td class="tabUnderline"><div><br/><pre class="tabAnchor">{AS}</pre></div></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td style="padding-top:20px;">Printed Name:</td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="tabUnderline"><div><br/><pre class="tabAnchor">{PN}</pre></div></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td style="padding-top:20px;"><pre class="tabAnchor">{SA}</pre>Use a different shipping address.</td>
+            <td></td>
+            <td style="padding-top:20px;"><pre class="tabAnchor">{BA}</pre>Use a different billing address.</td>
+          </tr>
+          <tr>
+            <td class="address"><br/><br/><br/><br/><br/><br/><br/></td>
+            <td></td>
+            <td class="address"></td>
+          </tr>
+        </table>
+      </div>
+
+      <div>
+        <h2>Payment Information:</h2>
+        <p><i>Prices quoted herein are expressed in <b>{!CurrencyName} [{!Opp.CurrencyIsoCode}]</b> unless otherwise specified. Payment terms are <b>{!Terms}</b>.</i></p>
+
+        <table>
+          <colgroup>
+            <col width="400" />
+            <col width="400" />
+          </colgroup>
+          <tr>
+            <td>
+              <dl>
+                <dt>Wire Transfer</dt>
+                <dd>ABA/Transit #: ####-####-#
+                  <br/>SwiftCode: ########
+                  <br/>Your Company, Inc.
+                  <br/>Account #: ######-###-#
+                </dd>
+              </dl>
+            </td>
+            <td>
+              <dl>
+                <dt>Pay by Check</dt>
+                <dd>Your Company, Inc.
+                  <br/>123 Company Street
+                  <br/>Boston, MA
+                  <br/>02101
+                </dd>
+              </dl>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <p><i>Your company's payment disclaimer.</i></p>
+    </div>
+  </apex:outputPanel>
+</body>
+</html>
+</apex:page>
